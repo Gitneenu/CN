@@ -1,0 +1,206 @@
+Server
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+#define buff 2500
+
+void main()
+{
+	int sockfd,newsock;
+	struct sockaddr_in server,client;
+	socklen_t len=sizeof(client);
+	char str[buff],msg[buff];
+	int n;
+	
+	sockfd=socket(AF_INET,SOCK_STREAM,0);
+	server.sin_family=AF_INET;
+	server.sin_addr.s_addr=INADDR_ANY;
+	server.sin_port=htons(2525);
+	
+	bind(sockfd,(struct sockaddr*)&server,sizeof(server));
+	listen(sockfd,5);
+	printf("Server waiting for connections\n");
+	
+	newsock=accept(sockfd,(struct sockaddr*)&client,&len);
+	
+	strcpy(str,"220 Localhost SMTP service ready");
+	send(newsock,str,strlen(str),0);
+	
+	//Hello
+	memset(str,0,buff);
+	n=recv(newsock,str,buff-1,0);
+	if (n>0)
+	{
+		str[n] = '\0';
+	}
+	printf("Client: %s\n",str);
+	
+	strcpy(str,"250 Okay");
+	send(newsock,str,strlen(str),0);
+	
+	//From Address
+	memset(str,0,buff);
+	n=recv(newsock,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Client: %s\n",str);
+	
+	strcpy(str,"250 Okay");
+	send(newsock,str,strlen(str),0);
+	
+	//To Address
+	memset(str,0,buff);
+	n=recv(newsock,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Client: %s\n",str);
+	
+	strcpy(str,"250 Okay");
+	send(newsock,str,strlen(str),0);
+	
+	//Data
+	memset(str,0,buff);
+	n=recv(newsock,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Client: %s\n",str);
+	
+	strcpy(str,"354 Go Ahead");
+	send(newsock,str,strlen(str),0);
+	
+	//Message
+	memset(msg,0,buff);
+	n=recv(newsock,msg,buff-1,0);
+	if (n>0)
+	{
+		msg[n]='\0';
+	}
+	printf("Client: %s\n",msg);
+	
+	//QUIT
+	memset(str,0,buff);
+	n=recv(newsock,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Client: %s\n",str);
+	
+	strcpy(str,"221Bye");
+	send(newsock,str,strlen(str),0);
+	
+	
+	close(sockfd);
+	close(newsock);
+}
+
+
+Client
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+#define buff 2200
+
+void main()
+{
+	int sockfd;
+	struct sockaddr_in server;
+	int n;
+	char c;
+	char str[buff],mail_f[50],mail_to[50],msg[220];
+	
+	sockfd=socket(AF_INET,SOCK_STREAM,0);
+	server.sin_family=AF_INET;
+	server.sin_port=htons(2525);
+	server.sin_addr.s_addr=inet_addr("127.0.0.1");
+	
+	connect(sockfd,(struct sockaddr*)&server,sizeof(server));
+	
+	n=recv(sockfd,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Server: %s",str);
+	
+	strcpy(str,"Hello Server");
+	send(sockfd,str,strlen(str),0);
+	
+	n=recv(sockfd,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Server: %s",str);
+	
+	printf("Enter the sender's Mail ");
+	fgets(mail_f,sizeof(mail_f),stdin);
+	mail_f[strcspn(mail_f,"\n")]=0;
+	sprintf(str,"From Mail <%s>\n",mail_f);
+	send(sockfd,str,strlen(str),0);
+	
+	n=recv(sockfd,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Server: %s",str);
+	
+	printf("Enter the Receiver's Mail ");
+	fgets(mail_to,sizeof(mail_to),stdin);
+	mail_to[strcspn(mail_to,"\n")] = 0;
+	sprintf(str,"To Mail <%s>\n",mail_to);
+	send(sockfd,str,strlen(str),0);
+	
+	n=recv(sockfd,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Server: %s",str);
+	
+	strcpy(str,"Data");
+	send(sockfd,str,strlen(str),0);
+	
+	n=recv(sockfd,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Server: %s",str);
+	
+	int ind=0;
+	printf("Enter Mail body ending with $\n");
+
+
+	while((c=getchar())!='$' && ind < sizeof(msg)-1)
+	{
+    		msg[ind++]=c;
+	}
+
+	msg[ind]='\0';
+	send(sockfd,msg,strlen(msg),0);
+	strcpy(str,"Quit");
+	send(sockfd,str,strlen(str),0);
+	
+	n=recv(sockfd,str,buff-1,0);
+	if (n>0)
+	{
+		str[n]='\0';
+	}
+	printf("Server: %s",str);
+}
